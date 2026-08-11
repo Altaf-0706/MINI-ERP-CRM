@@ -1,0 +1,95 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("SALES")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stockMovements StockMovement[]
+  challans       Challan[]
+}
+
+model Customer {
+  id            String         @id @default(uuid())
+  name          String
+  mobile        String
+  email         String?
+  businessName  String?
+  gstNumber     String?
+  customerType  String
+  address       String?
+  status        String         @default("LEAD")
+  followUpDate  DateTime?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  challans      Challan[]
+}
+
+model Product {
+  id             String          @id @default(uuid())
+  name           String
+  sku            String          @unique
+  category       String?
+  unitPrice      Float
+  currentStock   Int             @default(0)
+  minStockAlert  Int             @default(0)
+  location       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  stockMovements StockMovement[]
+  challanItems   ChallanItem[]
+}
+
+model StockMovement {
+  id              String       @id @default(uuid())
+  product         Product      @relation(fields: [productId], references: [id])
+  productId       String
+  quantityChanged Int
+  movementType    String
+  reason          String?
+  user            User         @relation(fields: [createdBy], references: [id])
+  createdBy       String
+  timestamp       DateTime     @default(now())
+}
+
+model Challan {
+  id            String        @id @default(uuid())
+  challanNumber String        @unique
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  customerId    String
+  totalQuantity Int
+  status        String        @default("DRAFT")
+  user          User          @relation(fields: [createdBy], references: [id])
+  createdBy     String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items         ChallanItem[]
+}
+
+model ChallanItem {
+  id              String   @id @default(uuid())
+  challan         Challan  @relation(fields: [challanId], references: [id])
+  challanId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  productId       String
+  quantity        Int
+  unitPrice       Float
+  productSnapshot String   // Note: SQLite doesn't support Json natively in Prisma sometimes, stringified JSON used
+
+  @@unique([challanId, productId])
+}
