@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { getQueryString } from '../utils/query';
 
 const generateChallanNumber = async () => {
   const count = await prisma.challan.count();
@@ -9,10 +10,12 @@ const generateChallanNumber = async () => {
 
 export const getChallans = async (req: Request, res: Response) => {
   try {
-    const { status, page = '1', limit = '10' } = req.query;
+    const status = getQueryString(req, 'status');
+    const page = getQueryString(req, 'page') || '1';
+    const limit = getQueryString(req, 'limit') || '10';
     const skip = (Number(page) - 1) * Number(limit);
 
-    const whereClause = status ? { status: String(status) as any } : {};
+    const whereClause = status ? { status: status as any } : {};
 
     const [challans, total] = await Promise.all([
       prisma.challan.findMany({
@@ -42,7 +45,7 @@ export const getChallans = async (req: Request, res: Response) => {
 export const getChallanById = async (req: Request, res: Response) => {
   try {
     const challan = await prisma.challan.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         customer: true,
         items: true,
@@ -177,7 +180,7 @@ export const createChallan = async (req: AuthRequest, res: Response) => {
 
 export const confirmDraftChallan = async (req: AuthRequest, res: Response) => {
   try {
-    const challanId = req.params.id;
+    const challanId = req.params.id as string;
     if (!req.user || !req.user.id) throw new Error('Not authorized');
 
     const challan = await prisma.challan.findUnique({
@@ -239,7 +242,7 @@ export const confirmDraftChallan = async (req: AuthRequest, res: Response) => {
 export const deleteChallan = async (req: AuthRequest, res: Response) => {
   try {
     const challan = await prisma.challan.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: { items: true },
     });
     if (!challan) {

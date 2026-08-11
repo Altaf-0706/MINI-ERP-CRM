@@ -1,17 +1,20 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { getQueryString } from '../utils/query';
 
 export const getProducts = async (req: Request, res: Response) => {
   try {
-    const { search, page = '1', limit = '10' } = req.query;
+    const search = getQueryString(req, 'search');
+    const page = getQueryString(req, 'page') || '1';
+    const limit = getQueryString(req, 'limit') || '10';
     const skip = (Number(page) - 1) * Number(limit);
 
     const whereClause = search
       ? {
           OR: [
-            { name: { contains: String(search), mode: 'insensitive' as const } },
-            { sku: { contains: String(search), mode: 'insensitive' as const } },
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { sku: { contains: search, mode: 'insensitive' as const } },
           ],
         }
       : {};
@@ -40,7 +43,7 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
     if (product) {
       res.json(product);
@@ -84,7 +87,7 @@ export const createProduct = async (req: Request, res: Response) => {
 export const updateProduct = async (req: Request, res: Response) => {
   try {
     const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
 
     if (!product) {
@@ -93,7 +96,7 @@ export const updateProduct = async (req: Request, res: Response) => {
     }
 
     const updatedProduct = await prisma.product.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         ...req.body,
         unitPrice: req.body.unitPrice ? Number(req.body.unitPrice) : product.unitPrice,
@@ -110,7 +113,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 export const adjustStock = async (req: AuthRequest, res: Response) => {
   try {
     const { quantityChanged, movementType, reason } = req.body;
-    const productId = req.params.id;
+    const productId = req.params.id as string;
 
     if (!req.user || !req.user.id) {
       res.status(401);
@@ -155,10 +158,12 @@ export const adjustStock = async (req: AuthRequest, res: Response) => {
 
 export const getStockMovements = async (req: Request, res: Response) => {
   try {
-    const { productId, page = '1', limit = '10' } = req.query;
+    const productId = getQueryString(req, 'productId');
+    const page = getQueryString(req, 'page') || '1';
+    const limit = getQueryString(req, 'limit') || '10';
     const skip = (Number(page) - 1) * Number(limit);
 
-    const whereClause = productId ? { productId: String(productId) } : {};
+    const whereClause = productId ? { productId: productId } : {};
 
     const movements = await prisma.stockMovement.findMany({
       where: whereClause,
@@ -180,13 +185,13 @@ export const getStockMovements = async (req: Request, res: Response) => {
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
     const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
     if (!product) {
       res.status(404);
       throw new Error('Product not found');
     }
-    await prisma.product.delete({ where: { id: req.params.id } });
+    await prisma.product.delete({ where: { id: req.params.id as string } });
     res.json({ message: 'Product deleted successfully' });
   } catch (error: any) {
     if (error.code === 'P2003') {

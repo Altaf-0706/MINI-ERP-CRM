@@ -1,20 +1,23 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
+import { getQueryString } from '../utils/query';
 
 // @desc    Get all customers
 // @route   GET /api/customers
 // @access  Private
 export const getCustomers = async (req: Request, res: Response) => {
   try {
-    const { search, page = '1', limit = '10' } = req.query;
+    const search = getQueryString(req, 'search');
+    const page = getQueryString(req, 'page') || '1';
+    const limit = getQueryString(req, 'limit') || '10';
     const skip = (Number(page) - 1) * Number(limit);
 
     const whereClause = search
       ? {
           OR: [
-            { name: { contains: String(search), mode: 'insensitive' as const } },
-            { mobile: { contains: String(search) } },
-            { businessName: { contains: String(search), mode: 'insensitive' as const } },
+            { name: { contains: search, mode: 'insensitive' as const } },
+            { mobile: { contains: search } },
+            { businessName: { contains: search, mode: 'insensitive' as const } },
           ],
         }
       : {};
@@ -46,7 +49,7 @@ export const getCustomers = async (req: Request, res: Response) => {
 export const getCustomerById = async (req: Request, res: Response) => {
   try {
     const customer = await prisma.customer.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
 
     if (customer) {
@@ -105,7 +108,7 @@ export const createCustomer = async (req: Request, res: Response) => {
 export const updateCustomer = async (req: Request, res: Response) => {
   try {
     const customer = await prisma.customer.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
 
     if (!customer) {
@@ -114,7 +117,7 @@ export const updateCustomer = async (req: Request, res: Response) => {
     }
 
     const updatedCustomer = await prisma.customer.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         ...req.body,
         followUpDate: req.body.followUpDate ? new Date(req.body.followUpDate) : customer.followUpDate,
@@ -133,13 +136,13 @@ export const updateCustomer = async (req: Request, res: Response) => {
 export const deleteCustomer = async (req: Request, res: Response) => {
   try {
     const customer = await prisma.customer.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
     if (!customer) {
       res.status(404);
       throw new Error('Customer not found');
     }
-    await prisma.customer.delete({ where: { id: req.params.id } });
+    await prisma.customer.delete({ where: { id: req.params.id as string } });
     res.json({ message: 'Customer deleted successfully' });
   } catch (error: any) {
     if (error.code === 'P2003') {
