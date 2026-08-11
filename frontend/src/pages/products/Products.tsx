@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { Search, Plus, Edit, AlertCircle, FileText, Trash2, Sliders } from 'lucide-react';
 
@@ -130,7 +130,7 @@ const Products = () => {
                           {p.currentStock}
                         </span>
                         {p.currentStock <= p.minStockAlert && (
-                          <AlertCircle size={16} color="#DC2626" title="Low Stock Alert" />
+                          <span title="Low Stock Alert"><AlertCircle size={16} color="#DC2626" /></span>
                         )}
                       </div>
                     </td>
